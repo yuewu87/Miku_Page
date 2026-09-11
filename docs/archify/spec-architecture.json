@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "MIKU NOTE 交互博客 · 运行架构",
+    "output": "miku-note-architecture.html",
+    "quality_profile": "showcase",
+    "legend": {
+      "mode": "auto",
+      "entries": {
+        "external": { "label": "外部参与者" },
+        "frontend": { "label": "浏览器端模块" },
+        "backend": { "label": "本地预览服务" },
+        "database": { "label": "本地资源与状态" },
+        "cloud": { "label": "外部 CDN" }
+      }
+    },
+    "views": [
+      { "id": "delivery", "label": "交付与运行", "focus": ["server", "browser", "page", "main"], "note": "从 start.bat 到页面总装：零构建静态站点如何在本地跑起来。" },
+      { "id": "interactive", "label": "创意交互模块", "focus": ["main", "audio", "effects", "danmaku", "vrm"], "note": "音乐、粒子、弹幕、3D 四个模块都由 main.js 总装调度，全部由浏览器实时生成。" },
+      { "id": "state", "label": "外部依赖与本地状态", "focus": ["vrm", "cdn", "assets", "store"], "note": "3D 依赖走 CDN，模型与图片在本地，用户数据落在 localStorage。" }
+    ]
+  },
+  "layout": {
+    "mode": "grid",
+    "origin": [60, 70],
+    "cols": 5,
+    "cellW": 130,
+    "cellH": 130,
+    "gapX": 100,
+    "gapY": 120
+  },
+  "components": [
+    { "id": "cdn", "type": "cloud", "label": "外部 CDN", "sublabel": "esm.sh / Fonts", "row": 0, "col": 1 },
+    { "id": "theme", "type": "frontend", "label": "双主题样式", "sublabel": "style.css", "row": 0, "col": 2 },
+    { "id": "audio", "type": "frontend", "label": "合成音乐引擎", "sublabel": "audio-engine.js", "row": 0, "col": 3 },
+    { "id": "effects", "type": "frontend", "label": "视觉特效", "sublabel": "effects.js", "row": 0, "col": 4 },
+    { "id": "server", "type": "backend", "label": "本地预览服务", "sublabel": "server.js", "row": 1, "col": 0 },
+    { "id": "browser", "type": "external", "label": "访客浏览器", "sublabel": "Chrome / Edge", "row": 1, "col": 1 },
+    { "id": "page", "type": "frontend", "label": "页面骨架", "sublabel": "index.html", "row": 1, "col": 2 },
+    { "id": "main", "type": "frontend", "label": "交互总装", "sublabel": "main.js + data.js", "row": 1, "col": 3 },
+    { "id": "danmaku", "type": "frontend", "label": "弹幕引擎", "sublabel": "danmaku.js", "row": 1, "col": 4 },
+    { "id": "assets", "type": "database", "label": "静态资源", "sublabel": "assets/", "row": 2, "col": 2 },
+    { "id": "vrm", "type": "frontend", "label": "VRM 3D 初音", "sublabel": "vrm-miku.js", "tag": "断网回退 SVG", "row": 2, "col": 3 },
+    { "id": "store", "type": "database", "label": "浏览器本地存储", "sublabel": "弹幕 · 留言 · 主题", "row": 2, "col": 4 }
+  ],
+  "connections": [
+    { "id": "serve", "from": "server", "to": "browser", "label": "HTTP :3939", "variant": "emphasis" },
+    { "id": "load-page", "from": "browser", "to": "page", "label": "加载入口页", "labelAt": [430, 394] },
+    { "id": "use-style", "from": "page", "to": "theme", "label": "引用样式" },
+    { "id": "load-script", "from": "page", "to": "main", "label": "加载脚本" },
+    { "id": "use-image", "from": "page", "to": "assets", "label": "引用图片", "labelDy": 30 },
+    { "id": "use-cdn", "from": "page", "to": "cdn", "label": "字体 / ESM" },
+    { "id": "init-audio", "from": "main", "to": "audio", "label": "合成" },
+    { "id": "init-effects", "from": "main", "to": "effects", "label": "绘制" },
+    { "id": "init-danmaku", "from": "main", "to": "danmaku", "label": "调度", "labelDy": 16 },
+    { "id": "init-vrm", "from": "main", "to": "vrm", "label": "渲染", "labelDy": 40 },
+    { "id": "load-model", "from": "vrm", "to": "assets", "label": "加载模型" },
+    { "id": "save-danmaku", "from": "danmaku", "to": "store", "label": "弹幕记录", "labelDy": 40 }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "运行方式",
+      "items": [
+        "双击 index.html 也能直接打开，零构建",
+        "start.bat 校验 Node 后执行 node server.js（默认 :3939）并自动开浏览器",
+        "server.js 仅用 node 内置 http/fs/path，含路径穿越 403 防护"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "创意交互（浏览器实时生成）",
+      "items": [
+        "Web Audio 合成 3 首原创曲 + 频谱可视化，无任何音频文件",
+        "粒子星空 / 雪花、3D 卡片倾斜、弹幕墙、Konami 彩蛋",
+        "VRM 3D 初音：呼吸与光标视线跟随，Snow 主题自动换光色"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "降级与持久化",
+      "items": [
+        "无 WebGL / 断网 / 模型加载失败 → 回退到手绘 SVG 初音",
+        "弹幕、留言、主题分别写入 localStorage",
+        "three.js 0.160.1 与 @pixiv/three-vrm 3.5.5 经 esm.sh 固定版本引入"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+# 系统与编辑器垃圾
+Thumbs.db
+Desktop.ini
+.DS_Store
+.vscode/
+.idea/
+*.log
+
+# 依赖与构建产物（本项目为零构建，留作保险）
+node_modules/
+dist/
+
+# 大体积第三方 3D 模型：43MB，粉丝同人作品（Tda 式初音ミク V4X 转换），
+# 再分发授权需自行核验，因此默认不进仓库；本地保留不影响运行。
+# 想一起推上去：删掉下面两行后 git add assets/model/miku.vrm
+assets/model/miku.vrm
+
+# 临时文件
+*.tmp
+*~

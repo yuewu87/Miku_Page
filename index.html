@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="miku">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="MIKU NOTE —— 以初音未来为主题的创意交互博客：合成音乐播放器、弹幕墙、粒子星空、Snow Miku 主题切换。">
+<title>MIKU NOTE · 初音未来主题博客</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2339c5bb'/%3E%3Ctext x='32' y='44' font-size='34' font-family='Arial Black' font-weight='900' text-anchor='middle' fill='%23fff'%3E39%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=ZCOOL+KuaiLe&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<!-- three.js + @pixiv/three-vrm：CDN ESM（jsDelivr esm.sh），单一 three 实例避免重复 -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://esm.sh/three@0.160.1",
+    "three/addons/": "https://esm.sh/three@0.160.1/examples/jsm/",
+    "@pixiv/three-vrm": "https://esm.sh/@pixiv/three-vrm@3.5.5?external=three"
+  }
+}
+</script>
+</head>
+<body>
+
+<!-- 预加载 -->
+<div id="preloader" aria-hidden="true">
+  <div class="pre-inner">
+    <div class="pre-note">♪</div>
+    <div class="pre-title">MIKU&nbsp;NOTE</div>
+    <div class="pre-bar"><span id="pre-bar-fill"></span></div>
+    <div class="pre-tip" id="pre-tip">正在调音…</div>
+  </div>
+</div>
+
+<!-- 粒子背景 -->
+<canvas id="bg-canvas" aria-hidden="true"></canvas>
+
+<!-- 自定义光标 -->
+<div id="cursor-dot" aria-hidden="true"></div>
+<div id="cursor-ring" aria-hidden="true"></div>
+<div id="cursor-emoji" aria-hidden="true"></div>
+
+<!-- 阅读进度条 -->
+<div id="scroll-progress" aria-hidden="true"><span id="scroll-progress-fill"></span></div>
+
+<!-- 导航 -->
+<header id="navbar">
+  <a class="nav-logo" href="#hero">
+    <svg viewBox="0 0 40 40" width="30" height="30" aria-hidden="true">
+      <path d="M12 32 C12 14 16 10 26 8 L26 30 C26 34 22 36 19 34 C16 32 16 29 19 28 C22 27 24 28 24 30" fill="none" stroke="var(--accent)" stroke-width="2.4" stroke-linecap="round"/>
+      <path d="M22 10 C24 6 30 4 34 6 L34 14 C34 16 31 17 29 15 C27 13 28 10 31 10" fill="none" stroke="var(--primary)" stroke-width="2.4" stroke-linecap="round"/>
+    </svg>
+    <span>MIKU<span class="logo-accent">NOTE</span></span>
+  </a>
+  <nav class="nav-links" id="nav-links">
+    <a href="#hero" class="active">首页</a>
+    <a href="#blog">博客</a>
+    <a href="#timeline">编年史</a>
+    <a href="#gallery">图库</a>
+    <a href="#guestbook">留言板</a>
+    <a href="#about">关于</a>
+  </nav>
+  <div class="nav-actions">
+    <button id="btn-music" class="icon-btn" title="播放/暂停音乐 (M)">
+      <span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+    </button>
+    <button id="btn-theme" class="icon-btn" title="切换 Snow Miku 主题 (T)">
+      <span id="theme-icon">❄</span>
+    </button>
+    <button id="btn-menu" class="icon-btn only-mobile" title="菜单" aria-label="打开菜单">☰</button>
+  </div>
+</header>
+
+<main>
+  <!-- HERO -->
+  <section id="hero">
+    <canvas id="danmaku-canvas" aria-hidden="true"></canvas>
+    <div class="hero-inner">
+      <div class="hero-text">
+        <p class="hero-badge">♪ VOCALOID × CREATIVE WEB</p>
+        <h1 class="hero-title glitch" data-text="MIKU NOTE">MIKU NOTE</h1>
+        <p class="hero-subtitle">
+          <span id="typing"></span><span class="caret" aria-hidden="true"></span>
+        </p>
+        <p class="hero-desc">世界第一的公主殿下 · 一个献给初音未来的交互式博客<br>合成音乐 / 弹幕 / 粒子星空 / 冬日主题 —— 全部由浏览器实时生成</p>
+        <div class="hero-buttons">
+          <a class="btn btn-primary" href="#blog"><span>进入博客</span>▶</a>
+          <button class="btn btn-ghost" id="btn-play-hero">♪ 播放合成曲</button>
+          <button class="btn btn-ghost" id="btn-danmaku">弹幕护体</button>
+        </div>
+        <div class="hero-stats">
+          <div class="stat"><span class="stat-num" data-count="39">0</span><span class="stat-label">谢谢 · 39</span></div>
+          <div class="stat"><span class="stat-num" data-count="18">0</span><span class="stat-label">出道周年</span></div>
+          <div class="stat"><span class="stat-num" data-count="100000">0</span><span class="stat-label">+ 创作者</span></div>
+          <div class="stat"><span class="stat-num" data-count="9999">0</span><span class="stat-label">∞ 条弹幕</span></div>
+        </div>
+      </div>
+
+      <div class="hero-visual" id="hero-visual">
+        <div class="hero-glow" aria-hidden="true"></div>
+        <!-- VRM 3D 初音（JS/网络不可用时自动隐藏，回退到下方 SVG） -->
+        <canvas id="vrm-canvas" aria-hidden="true"></canvas>
+        <svg class="miku-svg" viewBox="0 0 320 430" aria-label="初音未来风格插画">
+          <defs>
+            <linearGradient id="hairGrad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0" stop-color="#7dfcf2"/><stop offset="1" stop-color="#39c5bb"/>
+            </linearGradient>
+            <linearGradient id="tailGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#39c5bb"/><stop offset="1" stop-color="#1d8f9b"/>
+            </linearGradient>
+            <radialGradient id="skin" cx=".4" cy=".35" r="1">
+              <stop offset="0" stop-color="#fff3ec"/><stop offset="1" stop-color="#ffe3d6"/>
+            </radialGradient>
+            <filter id="softGlow" x="-40%" y="-40%" width="180%" height="180%">
+              <feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+            </filter>
+          </defs>
+          <!-- 身后光晕 -->
+          <circle cx="160" cy="200" r="130" class="miku-aura" fill="var(--primary)" opacity="0.12"/>
+          <!-- 左马尾 -->
+          <g class="tail tail-l">
+            <path d="M92 96 C40 80 30 40 52 26 C74 12 96 40 92 66 C110 40 138 34 146 52 C154 70 128 92 100 100 Z" fill="url(#tailGrad)"/>
+            <path d="M86 84 C54 66 44 42 58 32" fill="none" stroke="#b7fff7" stroke-width="3" stroke-linecap="round" opacity="0.75"/>
+          </g>
+          <!-- 右马尾 -->
+          <g class="tail tail-r">
+            <path d="M228 96 C280 80 290 40 268 26 C246 12 224 40 228 66 C210 40 182 34 174 52 C166 70 192 92 220 100 Z" fill="url(#tailGrad)"/>
+            <path d="M234 84 C266 66 276 42 262 32" fill="none" stroke="#b7fff7" stroke-width="3" stroke-linecap="round" opacity="0.75"/>
+          </g>
+          <!-- 长发（身后披发） -->
+          <path d="M102 118 C102 66 218 66 218 118 L220 352 C220 368 100 368 100 352 Z" fill="url(#tailGrad)"/>
+          <!-- 脖子（先画，收进衣领后面） -->
+          <path d="M145 194 L175 194 L171 252 L149 252 Z" fill="url(#skin)"/>
+          <path d="M151 210 Q160 217 169 210 L168 228 Q160 234 152 228 Z" fill="#ecc9b5" opacity="0.5"/>
+          <!-- 身体（衣领盖住脖子底部） -->
+          <path d="M130 288 L118 324 Q118 336 132 338 L152 340 L152 370 L166 370 L166 338 L186 336 Q200 334 198 322 L188 288 Z" fill="#1b232d"/>
+          <path d="M126 290 L194 290 L190 230 L130 230 Z" fill="#2a3646"/>
+          <path d="M160 230 L150 254 L160 268 L172 254 Z" fill="var(--primary)"/>
+          <path d="M160 230 L154 238 L160 244 L166 238 Z" fill="#e8faff"/>
+          <!-- 后发盖（完整包裹头顶与两侧） -->
+          <path d="M92 128 C90 58 230 58 228 128 L228 170 C228 200 210 206 160 206 C110 206 92 200 92 170 Z" fill="url(#tailGrad)"/>
+          <!-- 袖子 -->
+          <path d="M112 240 Q96 240 92 256 Q90 272 104 278 Q118 284 126 274 L134 252 Z" fill="#2a3646"/>
+          <path d="M208 240 Q224 240 228 256 Q230 272 216 278 Q202 284 194 274 L186 252 Z" fill="#2a3646"/>
+          <path d="M94 266 L122 276" stroke="var(--primary)" stroke-width="4" stroke-linecap="round"/>
+          <path d="M226 266 L198 276" stroke="var(--primary)" stroke-width="4" stroke-linecap="round"/>
+          <!-- 头 -->
+          <g class="head">
+            <circle cx="160" cy="150" r="58" fill="url(#skin)"/>
+            <!-- 刘海（完整覆盖额头、头顶与太阳穴，侧边深垂） -->
+            <path d="M98 158 C96 60 224 60 222 158 C210 152 202 152 192 148 C182 140 172 132 160 126 C148 132 138 140 128 148 C118 152 110 152 98 158 Z" fill="url(#hairGrad)"/>
+            <!-- 呆毛 -->
+            <path d="M158 84 Q150 54 168 40" fill="none" stroke="url(#hairGrad)" stroke-width="6" stroke-linecap="round"/>
+            <!-- 两侧垂发 -->
+            <path d="M102 148 C98 188 106 220 128 234 C114 230 106 210 104 180 C103 168 102 156 102 148 Z" fill="#2eb8ae"/>
+            <path d="M218 148 C222 188 214 220 192 234 C206 230 214 210 216 180 C217 168 218 156 218 148 Z" fill="#2eb8ae"/>
+            <!-- 眼睛 -->
+            <g class="eye-l">
+              <ellipse cx="134" cy="168" rx="13" ry="17" fill="#12364a"/>
+              <ellipse cx="134" cy="168" rx="6" ry="9" fill="#39c5bb"/>
+              <circle cx="138" cy="162" r="4" fill="#eafcff"/>
+            </g>
+            <g class="eye-r">
+              <ellipse cx="186" cy="168" rx="13" ry="17" fill="#12364a"/>
+              <ellipse cx="186" cy="168" rx="6" ry="9" fill="#39c5bb"/>
+              <circle cx="190" cy="162" r="4" fill="#eafcff"/>
+            </g>
+            <path d="M154 192 Q160 196 166 192" stroke="#e8a3a3" stroke-width="3" fill="none" stroke-linecap="round"/>
+            <!-- 耳机 -->
+            <path d="M96 142 Q96 106 128 104 L192 104 Q224 106 224 142" fill="none" stroke="#10161f" stroke-width="9" stroke-linecap="round"/>
+            <rect x="122" y="102" width="76" height="12" rx="6" fill="#10161f"/>
+            <rect x="90" y="120" width="17" height="25" rx="7" fill="#ff5f7a"/>
+            <rect x="213" y="120" width="17" height="25" rx="7" fill="#ff5f7a"/>
+            <rect x="156" y="112" width="8" height="24" rx="4" fill="#ff5f7a"/>
+          </g>
+          <!-- 左手 + 葱 -->
+          <g class="leek-hand">
+            <path d="M112 256 Q96 250 90 238 Q84 228 96 224" fill="none" stroke="url(#skin)" stroke-width="12" stroke-linecap="round"/>
+            <g class="leek" transform="translate(76 182) rotate(-24)">
+              <path d="M4 34 C4 20 10 12 16 6 L22 12 C18 18 16 24 16 34 Z" fill="#f3f7f4"/>
+              <path d="M16 34 C16 20 22 12 28 6 L34 12 C30 18 28 24 28 34 Z" fill="#cfe3d4"/>
+              <path d="M14 34 L18 34 L18 62 L14 62 Z" fill="#f3f7f4"/>
+              <path d="M20 34 L26 34 L26 62 L20 62 Z" fill="#cfe3d4"/>
+              <path d="M8 62 Q14 76 26 74 Q34 72 36 62" fill="none" stroke="#e9f0ea" stroke-width="3"/>
+            </g>
+          </g>
+          <!-- 右手 -->
+          <path d="M208 256 Q226 246 232 232 Q238 222 228 218" fill="none" stroke="url(#skin)" stroke-width="12" stroke-linecap="round"/>
+          <!-- 腿 -->
+          <path d="M136 340 L134 376 L152 376 L150 340 Z" fill="#1b232d"/>
+          <path d="M170 340 L172 376 L154 376 L156 340 Z" fill="#1b232d"/>
+          <path d="M134 360 L150 360" stroke="var(--primary)" stroke-width="4"/>
+          <path d="M172 360 L156 360" stroke="var(--primary)" stroke-width="4"/>
+          <path d="M130 376 L154 376 L154 384 L128 384 Z" fill="#10161f"/>
+          <path d="M172 376 L148 376 L148 384 L174 384 Z" fill="#10161f"/>
+          <!-- 音符 -->
+          <g class="notes">
+            <text x="30" y="120" class="note n1" font-size="26">♪</text>
+            <text x="264" y="180" class="note n2" font-size="20">♫</text>
+            <text x="52" y="250" class="note n3" font-size="18">♬</text>
+            <text x="252" y="300" class="note n4" font-size="24">♪</text>
+            <text x="140" y="40" class="note n5" font-size="16">♫</text>
+          </g>
+        </svg>
+        <div class="orbit orbit-1" aria-hidden="true"></div>
+        <div class="orbit orbit-2" aria-hidden="true"></div>
+        <div class="orbit-dot" aria-hidden="true"></div>
+      </div>
+    </div>
+
+    <div class="danmaku-bar">
+      <span class="danmaku-hint">发送一条弹幕，让它飞过舞台 →</span>
+      <input id="danmaku-input" maxlength="30" placeholder="输入弹幕，回车发送…（试试 39 / 葱 / ミク）" aria-label="弹幕输入框">
+      <button id="danmaku-send" class="btn btn-mini">发射</button>
+    </div>
+    <a class="scroll-hint" href="#blog" aria-label="向下滚动"><span></span></a>
+  </section>
+
+  <!-- 博客 -->
+  <section id="blog" class="section">
+    <div class="section-head reveal">
+      <p class="section-kicker">BLOG · 专栏</p>
+      <h2 class="section-title">最新音讯</h2>
+      <p class="section-desc">把光标移到卡片上试试 3D 倾斜效果，点击卡片阅读全文。</p>
+    </div>
+    <div class="filter-bar reveal" id="filter-bar">
+      <button class="chip active" data-filter="all">全部</button>
+      <button class="chip" data-filter="历史">历史</button>
+      <button class="chip" data-filter="活动">活动</button>
+      <button class="chip" data-filter="现场">现场</button>
+      <button class="chip" data-filter="手办">手办</button>
+      <button class="chip" data-filter="文化">文化</button>
+    </div>
+    <div id="posts-grid" class="posts-grid"></div>
+  </section>
+
+  <!-- 时间线 -->
+  <section id="timeline" class="section">
+    <div class="section-head reveal">
+      <p class="section-kicker">HISTORY · 编年史</p>
+      <h2 class="section-title">ミク大事记</h2>
+      <p class="section-desc">从 2007 年那个夏天开始，电子歌姬一路唱到今天。</p>
+    </div>
+    <div id="timeline-wrap" class="timeline"></div>
+  </section>
+
+  <!-- 图库 -->
+  <section id="gallery" class="section">
+    <div class="section-head reveal">
+      <p class="section-kicker">GALLERY · 图库</p>
+      <h2 class="section-title">葱粉收藏夹</h2>
+      <p class="section-desc">全部图片来自 Flickr，均按 CC 许可使用，点击可放大查看署名。</p>
+    </div>
+    <div id="gallery-grid" class="gallery-grid"></div>
+  </section>
+
+  <!-- 留言板 -->
+  <section id="guestbook" class="section">
+    <div class="section-head reveal">
+      <p class="section-kicker">GUESTBOOK · 留言板</p>
+      <h2 class="section-title">给 MIKU 的留言</h2>
+      <p class="section-desc">留言保存在你的浏览器本地，刷新不丢失。</p>
+    </div>
+    <div class="guestbook-box reveal">
+      <form id="guest-form" autocomplete="off">
+        <div class="gb-row">
+          <input id="gb-name" maxlength="12" placeholder="昵称（可选）" aria-label="昵称">
+          <div class="gb-color" id="gb-color-picker" title="选择头像颜色">
+            <span class="dot" data-c="#39c5bb"></span><span class="dot" data-c="#ff5f7a"></span><span class="dot" data-c="#7c8bff"></span><span class="dot" data-c="#ffb347"></span><span class="dot" data-c="#8be04e"></span><span class="dot" data-c="#ff7ae0"></span>
+          </div>
+        </div>
+        <textarea id="gb-msg" maxlength="140" rows="3" placeholder="写点什么吧…（例如：39！世界第一的公主殿下～）" aria-label="留言内容" required></textarea>
+        <div class="gb-actions">
+          <span class="gb-count" id="gb-count">0 / 140</span>
+          <button type="submit" class="btn btn-primary">留言 ♪</button>
+        </div>
+      </form>
+      <div id="gb-list" class="gb-list"></div>
+    </div>
+  </section>
+
+  <!-- 关于 -->
+  <section id="about" class="section">
+    <div class="about-grid">
+      <div class="about-card reveal">
+        <p class="section-kicker">ABOUT · 关于本站</p>
+        <h2 class="section-title">MIKU NOTE</h2>
+        <p>这是一个为学习与热爱而生的个人练习项目：以初音未来的「电子歌姬 × 网络文化」为灵感，把网页交互做成一场小小的演唱会。</p>
+        <ul class="feature-list">
+          <li>🎹 <b>合成音乐引擎</b> —— 用 Web Audio API 实时合成三首原创小曲，无需任何音频文件</li>
+          <li>💬 <b>弹幕墙</b> —— 像演唱会一样把弹幕打在公屏上，并保存在本地</li>
+          <li>✨ <b>粒子星空</b> —— 鼠标可拨动的青色星尘，Snow 主题下会下雪</li>
+          <li>❄ <b>Snow Miku 主题</b> —— 一键从「经典暗色」切换到「冰雪白昼」</li>
+          <li>🥬 <b>Konami 彩蛋</b> —— ↑↑↓↓←→←→BA，世界第一的公主殿下登场</li>
+        </ul>
+        <p class="shortcut-tip">快捷键：<kbd>M</kbd> 播放/暂停 · <kbd>T</kbd> 切换主题 · <kbd>↑↑↓↓←→←→BA</kbd> 彩蛋</p>
+      </div>
+      <div class="about-card about-photo reveal">
+        <img src="assets/img/hsp.jpg" alt="初音未来 HSP ver. 手办摄影" loading="lazy">
+        <p class="photo-cap">初音未来 HSP ver. · 摄影：Corsica_JP（CC BY）</p>
+      </div>
+    </div>
+    <div class="credits reveal">
+      <h3>图片素材与许可</h3>
+      <p>本站图片来自 Flickr 上的 CC 授权摄影作品（下载于 Openverse 检索），版权归原作者所有：</p>
+      <ul id="credits-list" class="credits-list"></ul>
+      <p class="credits-note">「初音未来 HATSUNE MIKU」为 Crypton Future Media 的注册商标与角色形象；本页为粉丝同人学习项目，与官方无关。</p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="footer-inner">
+    <div class="footer-logo">♪ MIKU NOTE</div>
+    <p>2007 → ∞ &nbsp;·&nbsp; 世界第一的公主殿下 &nbsp;·&nbsp; 39</p>
+    <p class="footer-small">同人学习项目 · 无商业用途 · 图片 CC 许可详见「关于」</p>
+  </div>
+</footer>
+
+<!-- 音乐播放器 -->
+<div id="player" aria-label="音乐播放器">
+  <canvas id="visualizer" width="140" height="48" aria-hidden="true"></canvas>
+  <div class="player-info">
+    <div class="player-track" id="player-track">Teal Pulse</div>
+    <div class="player-sub" id="player-sub">治愈系 · 合成器生成</div>
+  </div>
+  <div class="player-controls">
+    <button class="p-btn" id="btn-prev" title="上一首">⏮</button>
+    <button class="p-btn p-btn-main" id="btn-play" title="播放/暂停 (M)">▶</button>
+    <button class="p-btn" id="btn-next" title="下一首">⏭</button>
+  </div>
+  <div class="player-vol">
+    <span>🔊</span><input type="range" id="vol-slider" min="0" max="100" value="70" aria-label="音量">
+  </div>
+</div>
+
+<!-- 灯箱 -->
+<div id="lightbox" aria-hidden="true">
+  <button class="lb-close" aria-label="关闭">✕</button>
+  <img id="lb-img" alt="">
+  <div class="lb-cap" id="lb-cap"></div>
+</div>
+
+<!-- 文章阅读弹窗 -->
+<div id="post-modal" aria-hidden="true">
+  <div class="modal-card">
+    <button class="modal-close" aria-label="关闭">✕</button>
+    <div class="modal-hero"><img id="modal-img" alt=""><span id="modal-cat" class="modal-cat"></span></div>
+    <div class="modal-body">
+      <h2 id="modal-title"></h2>
+      <div class="modal-meta" id="modal-meta"></div>
+      <div class="modal-content" id="modal-content"></div>
+      <button class="btn btn-primary" id="modal-ok">读完啦 ♪</button>
+    </div>
+  </div>
+</div>
+
+<!-- 通知 -->
+<div id="toast" aria-live="polite"></div>
+
+<!-- Konami 彩蛋层 -->
+<div id="konami-overlay" aria-hidden="true">
+  <div class="konami-text">世界第一の姫様</div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/audio-engine.js"></script>
+<script src="js/effects.js"></script>
+<script src="js/danmaku.js"></script>
+<script src="js/main.js"></script>
+<script type="module" src="js/vrm-miku.js"></script>
+</body>
+</html>
