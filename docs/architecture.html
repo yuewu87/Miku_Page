@@ -13757,25 +13757,33 @@
     });
   </script>
 
-<style id="reader-width-override">
-  /* 覆盖查看器按高度反推的阅读宽度：整体等比缩到窗口宽度的 0.85 倍（上限 2000px），允许纵向滚动 */
-  html { --archify-reader-width: min(calc((100vw - 64px) * 0.85), 2000px) !important; }
-</style>
-<style id="snap-sections">
-  /* 三段磁吸：导览 / 画布 / 底部卡片，每段各自一屏高，滚动时自动置中 */
-  html { scroll-snap-type: y mandatory; scroll-behavior: smooth; }
-  html.snap-off { scroll-snap-type: none; }
-  .archify-snap {
-    min-height: var(--archify-snap-h, calc(100vh - 64px));
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    scroll-snap-align: center;
+<style id="one-screen-layout">
+  /* 单屏布局：左列 = 标题 + 导览栏 + 架构图；右列 = 三张卡片；整页不滚动 */
+  html { --archify-reader-width: none !important; scroll-behavior: smooth; }
+  .container {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) clamp(280px, 21vw, 380px);
+    grid-template-rows: auto auto auto;
+    gap: 10px 22px;
+    max-width: none !important;
+    width: 100%;
+    padding-top: 46px;      /* 给右上角固定工具条让位 */
+    padding-bottom: 0;
+    box-sizing: border-box;
+    align-content: start;
   }
-  @media print { html { scroll-snap-type: none; } .archify-snap { min-height: 0; } }
+  .container > .header { grid-column: 1; grid-row: 1; margin-left: 6%; }
+  .container > #guided-views { grid-column: 1; grid-row: 2; margin-left: 6%; }
+  .container > .diagram-container { grid-column: 1; grid-row: 3; height: var(--archify-panel-h, 70vh); }
+  .container > .diagram-container > svg { width: 100% !important; height: 100% !important; }
+  .container > .cards {
+    grid-column: 2; grid-row: 1 / span 3;
+    display: flex; flex-direction: column; gap: 12px;
+    align-self: start; overflow: visible;
+  }
 </style>
 <script>
-/* zh-ui overlay: chrome translation + diagram font scale. No geometry, no data changes. */
+/* zh-ui + one-screen overlay：只改界面文案、字号与版面，不动图形数据 */
 (() => {
   window.__zhRan = true;
   const FONT_SCALE = 1.35;
@@ -13824,61 +13832,37 @@
       if (out !== n.nodeValue) n.nodeValue = out;
     }
   };
-  let scaled = 0;
   const scaleFonts = () => {
     for (const el of document.querySelectorAll('svg text[font-size]')) {
       if (el.dataset.zhScaled === '1') continue;
       const base = parseFloat(el.getAttribute('font-size'));
       if (!Number.isFinite(base)) continue;
-      // 按原始字号分级：节点标题(11)放大最多；副标题(8.8/9)次之；连线标签(8)受底框限制只能小幅放大
       const SIZE_FACTORS = { 7: 1.15, 8: FONT_SCALE_EDGE, 8.8: FONT_SCALE_SMALL, 9: FONT_SCALE_SMALL, 10: 1.2, 11: FONT_SCALE, 12: 1.2 };
-      const factor = SIZE_FACTORS[base] || FONT_SCALE_EDGE;
-      el.style.fontSize = (base * factor).toFixed(2) + 'px';
+      el.style.fontSize = (base * (SIZE_FACTORS[base] || FONT_SCALE_EDGE)).toFixed(2) + 'px';
       el.dataset.zhScaled = '1';
-      scaled += 1;
     }
-    return scaled;
   };
-  const apply = () => { try { translate(document.body); scaleFonts(); } catch (e) {} };
+  // 让整页正好一屏：按实测的面板顶边反推面板高度（= 视口高 − 面板顶边 − 底部内边距）
+  const fitOneScreen = () => {
+    const shell = document.querySelector('.container');
+    const panel = shell && shell.querySelector('.diagram-container');
+    if (!shell || !panel) return;
+    const bcs = getComputedStyle(document.body);
+    const padBottom = parseFloat(bcs.paddingBottom) || 0;
+    const top = panel.getBoundingClientRect().top + window.scrollY;
+    const h = Math.round(innerHeight - top - padBottom);
+    shell.style.setProperty('--archify-panel-h', Math.max(320, h) + 'px');
+  };
+  const apply = () => { try { translate(document.body); scaleFonts(); fitOneScreen(); } catch (e) {} };
   let queued = false;
   const schedule = () => { if (queued) return; queued = true; setTimeout(() => { queued = false; apply(); }, 120); };
-  // ---- 三段磁吸：把 导览 / 画布 / 卡片 各自包成一屏 ----
-  const applySnapHeight = () => {
-    const cs = getComputedStyle(document.body);
-    const pad = parseFloat(cs.paddingTop || '0') + parseFloat(cs.paddingBottom || '0');
-    document.documentElement.style.setProperty('--archify-snap-h', Math.max(320, innerHeight - pad) + 'px');
-  };
-  const setupSnap = () => {
-    if (document.querySelector('.archify-snap')) { applySnapHeight(); return; }
-    const shell = document.querySelector('.container');
-    if (!shell) return;
-    const header = shell.querySelector('.header');
-    const guided = shell.querySelector('#guided-views');
-    const panel = shell.querySelector('.diagram-container');
-    const cards = shell.querySelector('.cards');
-    if (!header || !panel || !cards) return;
-    const wrap = (name, els) => {
-      const list = els.filter(Boolean);
-      const section = document.createElement('section');
-      section.className = 'archify-snap archify-snap-' + name;
-      section.dataset.snapPart = name;
-      list[0].parentNode.insertBefore(section, list[0]);
-      for (const el of list) section.appendChild(el);
-      return section;
-    };
-    wrap('guide', [header, guided]);
-    wrap('canvas', [panel]);
-    wrap('cards', [cards]);
-    applySnapHeight();
-    addEventListener('resize', applySnapHeight);
-  };
   const start = () => {
     apply();
-    setupSnap();
     new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, characterData: true });
     for (const ms of [200, 600, 1200, 2000, 3500, 6000]) setTimeout(apply, ms);
     const timer = setInterval(apply, 700);
     setTimeout(() => clearInterval(timer), 12000);
+    addEventListener('resize', apply);
     document.addEventListener('visibilitychange', apply);
     document.addEventListener('click', () => setTimeout(apply, 60), true);
   };
